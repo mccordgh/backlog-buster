@@ -41,7 +41,7 @@ function Tip({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-// ── Game card (vertical, 2-column grid) ──────────────────────────────────────
+// ── Main shelf card ───────────────────────────────────────────────────────────
 function GameCard({
   game,
   rank,
@@ -65,8 +65,7 @@ function GameCard({
   const medals = ["🥇", "🥈", "🥉"];
 
   return (
-    <div className="bg-gray-800 rounded-2xl border border-gray-700 flex flex-col">
-      {/* Image with rank badge overlay */}
+    <div className="bg-gray-800 rounded-2xl border border-gray-700 flex flex-col h-full">
       <div className="relative overflow-hidden rounded-t-2xl">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -76,7 +75,6 @@ function GameCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
 
-        {/* Rank badge */}
         <div className="absolute top-2 left-2 text-lg leading-none">
           {medals[rank] ?? (
             <span className="bg-black/60 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-lg">
@@ -85,7 +83,6 @@ function GameCard({
           )}
         </div>
 
-        {/* Not started badge */}
         {game.playtimeHours === 0 && (
           <div className="absolute top-2 right-2">
             <span className="bg-blue-900/80 backdrop-blur-sm text-blue-200 text-xs px-2 py-0.5 rounded-full">
@@ -94,7 +91,6 @@ function GameCard({
           </div>
         )}
 
-        {/* Hours-left chip at bottom of image */}
         {hoursLeft && (
           <div className="absolute bottom-2 right-2">
             <span className="bg-black/60 backdrop-blur-sm text-green-400 text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -104,7 +100,6 @@ function GameCard({
         )}
       </div>
 
-      {/* Content */}
       <div className="p-4 flex flex-col flex-1">
         <h3 className="font-semibold text-white leading-snug line-clamp-2">{game.name}</h3>
 
@@ -119,52 +114,34 @@ function GameCard({
 
         {game.percentComplete !== null && (
           <div className="mt-2.5">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>~{game.percentComplete}% of avg</span>
-            </div>
+            <div className="text-xs text-gray-500 mb-1">~{game.percentComplete}% of avg</div>
             <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 rounded-full"
-                style={{ width: `${game.percentComplete}%` }}
-              />
+              <div className="h-full bg-green-500 rounded-full" style={{ width: `${game.percentComplete}%` }} />
             </div>
           </div>
         )}
 
-        {/* Spacer so buttons always sit at the bottom */}
         <div className="flex-1" />
 
-        {/* Action buttons */}
         <div className="flex gap-4 mt-3 pt-3 border-t border-gray-700/50">
           <Tip label="I've seen the credits on this one">
-            <button
-              onClick={onMarkCompleted}
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-green-400 transition-colors cursor-pointer"
-            >
+            <button onClick={onMarkCompleted} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-green-400 transition-colors cursor-pointer">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               Beaten it
             </button>
           </Tip>
-
           <Tip label="Not feeling it right now — maybe later">
-            <button
-              onClick={onMarkShelved}
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-yellow-400 transition-colors cursor-pointer"
-            >
+            <button onClick={onMarkShelved} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-yellow-400 transition-colors cursor-pointer">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Not right now
             </button>
           </Tip>
-
           <Tip label="No clear ending — roguelike, sandbox, endless game">
-            <button
-              onClick={onMarkIgnored}
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-200 transition-colors cursor-pointer"
-            >
+            <button onClick={onMarkIgnored} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-200 transition-colors cursor-pointer">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
               </svg>
@@ -177,38 +154,106 @@ function GameCard({
   );
 }
 
-// ── Shared row for Completed / Dismissed tabs ────────────────────────────────
-function GameRow({
+// ── Status card (Completed + Dismissed tabs) ──────────────────────────────────
+const STATUS_META = {
+  completed: { icon: "✓", bg: "bg-green-900/80", text: "text-green-300", label: "Beaten" },
+  shelved:   { icon: "⏸", bg: "bg-yellow-900/80", text: "text-yellow-300", label: "Shelved" },
+  ignored:   { icon: "⊘", bg: "bg-gray-700/80",   text: "text-gray-300",   label: "No Ending" },
+} as const;
+
+function StatusCard({
   appid,
   game,
+  variant,
   onRestore,
 }: {
   appid: number;
   game?: EnrichedGame;
+  variant: DismissType;
   onRestore: () => void;
 }) {
+  const name = game?.name ?? `App #${appid}`;
+  const meta = STATUS_META[variant];
+
+  // For completed: how many hours under/over the average
+  const vsAvg =
+    variant === "completed" && game?.hltbMainHours != null && game.playtimeHours > 0
+      ? game.playtimeHours - game.hltbMainHours
+      : null;
+
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-800 rounded-xl border border-gray-700">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`}
-        alt={game?.name ?? ""}
-        className="w-16 h-9 rounded object-cover flex-shrink-0"
-      />
-      <span className="flex-1 text-sm text-gray-300 truncate">
-        {game?.name ?? `App #${appid}`}
-      </span>
-      <button
-        onClick={onRestore}
-        className="text-xs text-gray-500 hover:text-white transition-colors cursor-pointer flex-shrink-0"
-      >
-        Restore
-      </button>
+    <div className="bg-gray-800 rounded-2xl border border-gray-700 flex flex-col h-full">
+      <div className="relative overflow-hidden rounded-t-2xl">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`}
+          alt={name}
+          className="w-full h-32 object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
+        <div className={`absolute top-2 left-2 ${meta.bg} backdrop-blur-sm ${meta.text} text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1`}>
+          {meta.icon} {meta.label}
+        </div>
+      </div>
+
+      <div className="p-4 flex flex-col flex-1">
+        <h3 className="font-semibold text-white leading-snug line-clamp-2">{name}</h3>
+
+        {/* Base stats */}
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-xs text-gray-400">
+          {(game?.playtimeHours ?? 0) > 0 ? (
+            <span>🕹 {game!.playtimeHours.toFixed(1)}h played</span>
+          ) : (
+            <span className="text-blue-400">Never launched</span>
+          )}
+          {game?.hltbMainHours != null && variant !== "ignored" && (
+            <span>⏱ ~{Math.round(game.hltbMainHours)}h avg</span>
+          )}
+        </div>
+
+        {/* Completed: vs-average comparison */}
+        {variant === "completed" && vsAvg !== null && (
+          <div className={`mt-1.5 text-xs font-medium ${vsAvg <= 0 ? "text-green-400" : "text-gray-400"}`}>
+            {vsAvg <= 0
+              ? `${Math.abs(vsAvg).toFixed(1)}h under avg — nice`
+              : `${vsAvg.toFixed(1)}h over avg`}
+          </div>
+        )}
+
+        {/* Shelved: yellow progress bar showing how far they got */}
+        {variant === "shelved" && game?.percentComplete != null && (
+          <div className="mt-2.5">
+            <div className="text-xs text-gray-500 mb-1">~{game.percentComplete}% through avg playthrough</div>
+            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-full bg-yellow-500/70 rounded-full" style={{ width: `${game.percentComplete}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* No ending: hours are the story */}
+        {variant === "ignored" && (game?.playtimeHours ?? 0) > 0 && (
+          <div className="mt-1.5 text-xs text-gray-500">∞ No clear finish line</div>
+        )}
+
+        <div className="flex-1" />
+
+        <div className="mt-3 pt-3 border-t border-gray-700/50">
+          <button
+            onClick={onRestore}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors cursor-pointer"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+            Restore to shelf
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ── Completed tab ────────────────────────────────────────────────────────────
+// ── Completed tab ─────────────────────────────────────────────────────────────
 function CompletedTab({
   prefs,
   gameMap,
@@ -228,18 +273,24 @@ function CompletedTab({
     );
   }
   return (
-    <div className="space-y-1">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {prefs.completed.map((appid) => (
-        <GameRow key={appid} appid={appid} game={gameMap.get(appid)} onRestore={() => onRestore(appid)} />
+        <StatusCard
+          key={appid}
+          appid={appid}
+          game={gameMap.get(appid)}
+          variant="completed"
+          onRestore={() => onRestore(appid)}
+        />
       ))}
     </div>
   );
 }
 
-// ── Dismissed tab ────────────────────────────────────────────────────────────
-const DISMISS_GROUPS: { key: "shelved" | "ignored"; label: string; icon: string; color: string }[] = [
-  { key: "shelved", label: "Shelved — Not right now", icon: "⏸", color: "text-yellow-400" },
-  { key: "ignored", label: "No Ending",               icon: "⊘", color: "text-gray-400" },
+// ── Dismissed tab ─────────────────────────────────────────────────────────────
+const DISMISS_GROUPS: { key: "shelved" | "ignored"; label: string; color: string }[] = [
+  { key: "shelved", label: "Shelved — Not right now", color: "text-yellow-400" },
+  { key: "ignored", label: "No Ending",               color: "text-gray-400" },
 ];
 
 function DismissedTab({
@@ -262,19 +313,25 @@ function DismissedTab({
     );
   }
   return (
-    <div className="space-y-6">
-      {DISMISS_GROUPS.map(({ key, label, icon, color }) => {
+    <div className="space-y-8">
+      {DISMISS_GROUPS.map(({ key, label, color }) => {
         const ids = prefs[key];
         if (ids.length === 0) return null;
         return (
           <div key={key}>
-            <h3 className={`text-sm font-semibold mb-2 flex items-center gap-2 ${color}`}>
-              {icon} {label}
+            <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${color}`}>
+              {label}
               <span className="text-gray-600 font-normal">({ids.length})</span>
             </h3>
-            <div className="space-y-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {ids.map((appid) => (
-                <GameRow key={appid} appid={appid} game={gameMap.get(appid)} onRestore={() => onRestore(appid)} />
+                <StatusCard
+                  key={appid}
+                  appid={appid}
+                  game={gameMap.get(appid)}
+                  variant={key}
+                  onRestore={() => onRestore(appid)}
+                />
               ))}
             </div>
           </div>
@@ -284,7 +341,7 @@ function DismissedTab({
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const [data, setData] = useState<GamesResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -393,14 +450,11 @@ export default function DashboardPage() {
                 </p>
               </div>
             )}
-
             {error && (
               <div className="bg-red-900/30 border border-red-700 rounded-xl p-4 text-red-300">{error}</div>
             )}
-
             {!loading && data && (
               <>
-                {/* Heading row with dropdown inline */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
                     <h2 className="text-2xl font-bold">Your Shelf of Shame</h2>
@@ -425,7 +479,6 @@ export default function DashboardPage() {
                       )}
                     </p>
                   </div>
-
                   <div className="flex items-center gap-2 text-sm flex-shrink-0">
                     <label htmlFor="topN" className="text-gray-400 whitespace-nowrap">Show top</label>
                     <select
@@ -474,7 +527,9 @@ export default function DashboardPage() {
           <>
             <div className="space-y-1">
               <h2 className="text-2xl font-bold">Completed Games</h2>
-              <p className="text-gray-400 text-sm">Games you&apos;ve beaten. Click Restore to move one back to your shelf.</p>
+              <p className="text-gray-400 text-sm">
+                Games you&apos;ve beaten. Shows how your playtime compared to the average.
+              </p>
             </div>
             <CompletedTab prefs={prefs} gameMap={gameMap} onRestore={handleRestore} />
           </>
