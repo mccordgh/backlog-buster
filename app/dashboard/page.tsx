@@ -28,7 +28,7 @@ interface UndoState {
   type: DismissType;
 }
 
-// ── Tooltip wrapper ──────────────────────────────────────────────────────────
+// ── Tooltip ──────────────────────────────────────────────────────────────────
 function Tip({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="relative group/tip">
@@ -41,7 +41,143 @@ function Tip({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-// ── Shared game row used in Completed + Dismissed tabs ───────────────────────
+// ── Game card (vertical, 2-column grid) ──────────────────────────────────────
+function GameCard({
+  game,
+  rank,
+  onMarkCompleted,
+  onMarkShelved,
+  onMarkIgnored,
+}: {
+  game: EnrichedGame;
+  rank: number;
+  onMarkCompleted: () => void;
+  onMarkShelved: () => void;
+  onMarkIgnored: () => void;
+}) {
+  const hoursLeft =
+    game.remainingHours !== null
+      ? game.remainingHours < 1
+        ? `~${Math.round(game.remainingHours * 60)}m left (est.)`
+        : `~${game.remainingHours.toFixed(1)}h left (est.)`
+      : null;
+
+  const medals = ["🥇", "🥈", "🥉"];
+
+  return (
+    <div className="bg-gray-800 rounded-2xl border border-gray-700 flex flex-col">
+      {/* Image with rank badge overlay */}
+      <div className="relative overflow-hidden rounded-t-2xl">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appid}/header.jpg`}
+          alt={game.name}
+          className="w-full h-36 object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
+
+        {/* Rank badge */}
+        <div className="absolute top-2 left-2 text-lg leading-none">
+          {medals[rank] ?? (
+            <span className="bg-black/60 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-lg">
+              #{rank + 1}
+            </span>
+          )}
+        </div>
+
+        {/* Not started badge */}
+        {game.playtimeHours === 0 && (
+          <div className="absolute top-2 right-2">
+            <span className="bg-blue-900/80 backdrop-blur-sm text-blue-200 text-xs px-2 py-0.5 rounded-full">
+              Not started
+            </span>
+          </div>
+        )}
+
+        {/* Hours-left chip at bottom of image */}
+        {hoursLeft && (
+          <div className="absolute bottom-2 right-2">
+            <span className="bg-black/60 backdrop-blur-sm text-green-400 text-xs font-semibold px-2 py-0.5 rounded-full">
+              {hoursLeft}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="p-4 flex flex-col flex-1">
+        <h3 className="font-semibold text-white leading-snug line-clamp-2">{game.name}</h3>
+
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-xs text-gray-400">
+          {game.hltbMainHours !== null && (
+            <span>⏱ ~{Math.round(game.hltbMainHours)}h avg to beat</span>
+          )}
+          {game.playtimeHours > 0 && (
+            <span>🕹 {game.playtimeHours.toFixed(1)}h played</span>
+          )}
+        </div>
+
+        {game.percentComplete !== null && (
+          <div className="mt-2.5">
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>~{game.percentComplete}% of avg</span>
+            </div>
+            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 rounded-full"
+                style={{ width: `${game.percentComplete}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Spacer so buttons always sit at the bottom */}
+        <div className="flex-1" />
+
+        {/* Action buttons */}
+        <div className="flex gap-4 mt-3 pt-3 border-t border-gray-700/50">
+          <Tip label="I've seen the credits on this one">
+            <button
+              onClick={onMarkCompleted}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-green-400 transition-colors cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Beaten it
+            </button>
+          </Tip>
+
+          <Tip label="Not feeling it right now — maybe later">
+            <button
+              onClick={onMarkShelved}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-yellow-400 transition-colors cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Not right now
+            </button>
+          </Tip>
+
+          <Tip label="No clear ending — roguelike, sandbox, endless game">
+            <button
+              onClick={onMarkIgnored}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-200 transition-colors cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+              No ending
+            </button>
+          </Tip>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Shared row for Completed / Dismissed tabs ────────────────────────────────
 function GameRow({
   appid,
   game,
@@ -72,104 +208,6 @@ function GameRow({
   );
 }
 
-// ── Game card ────────────────────────────────────────────────────────────────
-function GameCard({
-  game,
-  rank,
-  onMarkCompleted,
-  onMarkShelved,
-  onMarkIgnored,
-}: {
-  game: EnrichedGame;
-  rank: number;
-  onMarkCompleted: () => void;
-  onMarkShelved: () => void;
-  onMarkIgnored: () => void;
-}) {
-  const hoursLeft =
-    game.remainingHours !== null
-      ? game.remainingHours < 1
-        ? `~${Math.round(game.remainingHours * 60)}m left (est.)`
-        : `~${game.remainingHours.toFixed(1)}h left (est.)`
-      : null;
-
-  const rankColors = ["text-yellow-400", "text-gray-300", "text-amber-600"];
-  const rankLabel = ["🥇", "🥈", "🥉"][rank] ?? `#${rank + 1}`;
-
-  return (
-    <div className="bg-gray-800 rounded-2xl p-5 flex gap-4 items-start border border-gray-700">
-      <div className="text-2xl w-8 text-center flex-shrink-0 mt-1">
-        <span className={rankColors[rank] ?? "text-gray-400"}>{rankLabel}</span>
-      </div>
-
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appid}/header.jpg`}
-        alt={game.name}
-        className="w-28 h-[52px] rounded-lg object-cover flex-shrink-0"
-      />
-
-      <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-white truncate">{game.name}</h3>
-
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-400">
-          {game.hltbMainHours !== null && (
-            <span>⏱ ~{Math.round(game.hltbMainHours)}h avg to beat</span>
-          )}
-          {game.playtimeHours > 0 && (
-            <span>🕹 {game.playtimeHours.toFixed(1)}h played</span>
-          )}
-          {hoursLeft && <span className="text-green-400 font-medium">{hoursLeft}</span>}
-        </div>
-
-        {game.percentComplete !== null && (
-          <div className="mt-2">
-            <div className="text-xs text-gray-500 mb-1">~{game.percentComplete}% of avg</div>
-            <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
-              <div className="h-full bg-green-500 rounded-full" style={{ width: `${game.percentComplete}%` }} />
-            </div>
-          </div>
-        )}
-
-        {game.playtimeHours === 0 && (
-          <span className="mt-1 inline-block text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded-full">
-            Not started
-          </span>
-        )}
-
-        <div className="flex gap-5 mt-3 pt-3 border-t border-gray-700/50">
-          <Tip label="I've seen the credits on this one">
-            <button onClick={onMarkCompleted} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-green-400 transition-colors cursor-pointer">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Beaten it
-            </button>
-          </Tip>
-
-          <Tip label="Not feeling it right now — maybe later">
-            <button onClick={onMarkShelved} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-yellow-400 transition-colors cursor-pointer">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Not right now
-            </button>
-          </Tip>
-
-          <Tip label="No clear ending — roguelike, sandbox, endless game">
-            <button onClick={onMarkIgnored} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-200 transition-colors cursor-pointer">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-              </svg>
-              No ending
-            </button>
-          </Tip>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Completed tab ────────────────────────────────────────────────────────────
 function CompletedTab({
   prefs,
@@ -185,22 +223,14 @@ function CompletedTab({
       <div className="bg-gray-800 rounded-2xl p-8 text-center text-gray-500 border border-gray-700">
         <p className="text-3xl mb-3">🏆</p>
         <p className="font-semibold text-gray-400">No completed games yet</p>
-        <p className="text-sm mt-1">
-          Hit &ldquo;Beaten it&rdquo; on any game card to log it here.
-        </p>
+        <p className="text-sm mt-1">Hit &ldquo;Beaten it&rdquo; on any game card to log it here.</p>
       </div>
     );
   }
-
   return (
     <div className="space-y-1">
       {prefs.completed.map((appid) => (
-        <GameRow
-          key={appid}
-          appid={appid}
-          game={gameMap.get(appid)}
-          onRestore={() => onRestore(appid)}
-        />
+        <GameRow key={appid} appid={appid} game={gameMap.get(appid)} onRestore={() => onRestore(appid)} />
       ))}
     </div>
   );
@@ -222,19 +252,15 @@ function DismissedTab({
   onRestore: (appid: number) => void;
 }) {
   const total = prefs.shelved.length + prefs.ignored.length;
-
   if (total === 0) {
     return (
       <div className="bg-gray-800 rounded-2xl p-8 text-center text-gray-500 border border-gray-700">
         <p className="text-3xl mb-3">📭</p>
         <p className="font-semibold text-gray-400">Nothing dismissed yet</p>
-        <p className="text-sm mt-1">
-          Use &ldquo;Not right now&rdquo; or &ldquo;No ending&rdquo; on any game card.
-        </p>
+        <p className="text-sm mt-1">Use &ldquo;Not right now&rdquo; or &ldquo;No ending&rdquo; on any game card.</p>
       </div>
     );
   }
-
   return (
     <div className="space-y-6">
       {DISMISS_GROUPS.map(({ key, label, icon, color }) => {
@@ -248,12 +274,7 @@ function DismissedTab({
             </h3>
             <div className="space-y-1">
               {ids.map((appid) => (
-                <GameRow
-                  key={appid}
-                  appid={appid}
-                  game={gameMap.get(appid)}
-                  onRestore={() => onRestore(appid)}
-                />
+                <GameRow key={appid} appid={appid} game={gameMap.get(appid)} onRestore={() => onRestore(appid)} />
               ))}
             </div>
           </div>
@@ -311,9 +332,7 @@ export default function DashboardPage() {
     showUndo(game.appid, game.name, type);
   }
 
-  function handleRestore(appid: number) {
-    setPrefs(unmark(appid));
-  }
+  function handleRestore(appid: number) { setPrefs(unmark(appid)); }
 
   function handleUndo() {
     if (!undo) return;
@@ -328,9 +347,8 @@ export default function DashboardPage() {
 
   const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: "main",      label: "Shelf of Shame" },
-    { id: "completed", label: "Completed", badge: prefs.completed.length || undefined },
-    { id: "dismissed", label: "Dismissed",
-      badge: (prefs.shelved.length + prefs.ignored.length) || undefined },
+    { id: "completed", label: "Completed",  badge: prefs.completed.length || undefined },
+    { id: "dismissed", label: "Dismissed",  badge: (prefs.shelved.length + prefs.ignored.length) || undefined },
   ];
 
   return (
@@ -342,7 +360,7 @@ export default function DashboardPage() {
         </a>
       </header>
 
-      <main className="max-w-2xl mx-auto px-6 py-10 space-y-8">
+      <main className="max-w-5xl mx-auto px-6 py-10 space-y-8">
         {/* Tab nav */}
         <div className="flex gap-1 p-1 bg-gray-800 rounded-xl w-fit border border-gray-700">
           {tabs.map(({ id, label, badge }) => (
@@ -363,7 +381,7 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* ── Shelf of Shame tab ── */}
+        {/* ── Shelf of Shame ── */}
         {tab === "main" && (
           <>
             {loading && (
@@ -371,8 +389,7 @@ export default function DashboardPage() {
                 <div className="text-4xl animate-spin inline-block">⚙️</div>
                 <p className="text-gray-400">
                   Fetching your library and looking up completion times via IGDB…
-                  <br />
-                  <span className="text-sm">This can take a minute for large libraries.</span>
+                  <br /><span className="text-sm">This can take a minute for large libraries.</span>
                 </p>
               </div>
             )}
@@ -383,46 +400,45 @@ export default function DashboardPage() {
 
             {!loading && data && (
               <>
-                <div className="space-y-1">
-                  <h2 className="text-2xl font-bold">Your Shelf of Shame</h2>
-                  <p className="text-gray-400 text-sm">
-                    From {data.total} games in your library, here are the ones
-                    you&apos;re closest to finishing — ranked by estimated hours remaining.
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    Times are averages from IGDB and will vary based on your pace and playstyle.
-                    {data.beatenHidden > 0 && (
-                      <span className="text-amber-600/80">
-                        {" "}{data.beatenHidden} game{data.beatenHidden > 1 ? "s" : ""} with
-                        story-completion achievements were hidden.
-                      </span>
-                    )}
-                    {userHiddenCount > 0 && (
-                      <span className="text-gray-500">
-                        {" "}{userHiddenCount} hidden by you.{" "}
-                        <button
-                          onClick={() => setTab("dismissed")}
-                          className="underline hover:text-gray-300 cursor-pointer"
-                        >
-                          Manage
-                        </button>
-                      </span>
-                    )}
-                  </p>
-                </div>
+                {/* Heading row with dropdown inline */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-bold">Your Shelf of Shame</h2>
+                    <p className="text-gray-400 text-sm">
+                      From {data.total} games, ranked by estimated hours remaining.
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Avg completion times from IGDB · main story · estimates only.
+                      {data.beatenHidden > 0 && (
+                        <span className="text-amber-600/80">
+                          {" "}{data.beatenHidden} game{data.beatenHidden > 1 ? "s" : ""} with
+                          story-completion achievements hidden.
+                        </span>
+                      )}
+                      {userHiddenCount > 0 && (
+                        <span className="text-gray-500">
+                          {" "}{userHiddenCount} hidden by you.{" "}
+                          <button onClick={() => setTab("dismissed")} className="underline hover:text-gray-300 cursor-pointer">
+                            Manage
+                          </button>
+                        </span>
+                      )}
+                    </p>
+                  </div>
 
-                <div className="flex items-center gap-3 text-sm">
-                  <label htmlFor="topN" className="text-gray-400">Show top</label>
-                  <select
-                    id="topN"
-                    value={topN}
-                    onChange={(e) => setTopN(Number(e.target.value))}
-                    className="bg-gray-800 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-1.5 cursor-pointer focus:outline-none focus:border-green-500"
-                  >
-                    <option value={5}>5 games</option>
-                    <option value={10}>10 games</option>
-                    <option value={25}>25 games</option>
-                  </select>
+                  <div className="flex items-center gap-2 text-sm flex-shrink-0">
+                    <label htmlFor="topN" className="text-gray-400 whitespace-nowrap">Show top</label>
+                    <select
+                      id="topN"
+                      value={topN}
+                      onChange={(e) => setTopN(Number(e.target.value))}
+                      className="bg-gray-800 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-1.5 cursor-pointer focus:outline-none focus:border-green-500"
+                    >
+                      <option value={5}>5 games</option>
+                      <option value={10}>10 games</option>
+                      <option value={25}>25 games</option>
+                    </select>
+                  </div>
                 </div>
 
                 {visible.length === 0 ? (
@@ -435,7 +451,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {visible.map((game, i) => (
                       <GameCard
                         key={game.appid}
@@ -448,17 +464,12 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 )}
-
-                <p className="text-xs text-gray-600 text-center">
-                  Avg completion times from IGDB · Main story · estimates only ·{" "}
-                  {data.processed} games checked
-                </p>
               </>
             )}
           </>
         )}
 
-        {/* ── Completed tab ── */}
+        {/* ── Completed ── */}
         {tab === "completed" && (
           <>
             <div className="space-y-1">
@@ -469,7 +480,7 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* ── Dismissed tab ── */}
+        {/* ── Dismissed ── */}
         {tab === "dismissed" && (
           <>
             <div className="space-y-1">
