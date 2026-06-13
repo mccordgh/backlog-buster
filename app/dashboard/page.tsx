@@ -435,6 +435,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<GamesResponse | null>(null);
   const [cachedAt, setCachedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [slowLoad, setSlowLoad] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [topN, setTopN] = useState(5);
   const [tab, setTab] = useState<Tab>("main");
@@ -459,7 +460,9 @@ export default function DashboardPage() {
 
   const fetchGames = useCallback(async () => {
     setLoading(true);
+    setSlowLoad(false);
     setRefreshError(null);
+    const slowTimer = setTimeout(() => setSlowLoad(true), 5000);
     try {
       const r = await fetch("/api/games");
       if (r.status === 401) {
@@ -474,6 +477,8 @@ export default function DashboardPage() {
     } catch (e) {
       setRefreshError((e as Error).message);
     } finally {
+      clearTimeout(slowTimer);
+      setSlowLoad(false);
       setLoading(false);
     }
   }, []);
@@ -587,13 +592,17 @@ export default function DashboardPage() {
               <div className="text-center space-y-4 py-20">
                 <div className="text-4xl animate-spin inline-block">⚙️</div>
                 <p className="text-gray-400">
-                  Fetching your library and looking up completion times via
-                  IGDB…
+                  Fetching your library and looking up completion times via IGDB…
                   <br />
                   <span className="text-sm">
                     This can take a minute for large libraries.
                   </span>
                 </p>
+                {slowLoad && (
+                  <p className="text-sm text-gray-500 animate-pulse">
+                    Hang tight — the server is waking up after a period of inactivity.
+                  </p>
+                )}
               </div>
             )}
 
