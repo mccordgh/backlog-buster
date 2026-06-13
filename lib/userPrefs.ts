@@ -1,18 +1,30 @@
 const STORAGE_KEY = "bb:prefs";
 
 export interface UserPrefs {
-  completed: number[]; // appids the user has beaten
-  ignored: number[];   // appids the user wants to skip (no ending, etc.)
+  completed: number[]; // beaten the main story
+  shelved: number[];   // not feeling it / maybe later
+  ignored: number[];   // no clear ending (roguelike, sandbox, etc.)
 }
 
 function load(): UserPrefs {
-  if (typeof window === "undefined") return { completed: [], ignored: [] };
+  if (typeof window === "undefined") return empty();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { completed: [], ignored: [] };
+    if (!raw) return empty();
+    const p = JSON.parse(raw);
+    // Backward-compat: old saves may not have shelved
+    return {
+      completed: p.completed ?? [],
+      shelved: p.shelved ?? [],
+      ignored: p.ignored ?? [],
+    };
   } catch {
-    return { completed: [], ignored: [] };
+    return empty();
   }
+}
+
+function empty(): UserPrefs {
+  return { completed: [], shelved: [], ignored: [] };
 }
 
 function save(prefs: UserPrefs): void {
@@ -26,6 +38,16 @@ export function loadPrefs(): UserPrefs {
 export function markCompleted(appid: number): UserPrefs {
   const p = load();
   p.completed = [...new Set([...p.completed, appid])];
+  p.shelved = p.shelved.filter((id) => id !== appid);
+  p.ignored = p.ignored.filter((id) => id !== appid);
+  save(p);
+  return p;
+}
+
+export function markShelved(appid: number): UserPrefs {
+  const p = load();
+  p.shelved = [...new Set([...p.shelved, appid])];
+  p.completed = p.completed.filter((id) => id !== appid);
   p.ignored = p.ignored.filter((id) => id !== appid);
   save(p);
   return p;
@@ -35,6 +57,7 @@ export function markIgnored(appid: number): UserPrefs {
   const p = load();
   p.ignored = [...new Set([...p.ignored, appid])];
   p.completed = p.completed.filter((id) => id !== appid);
+  p.shelved = p.shelved.filter((id) => id !== appid);
   save(p);
   return p;
 }
@@ -42,6 +65,7 @@ export function markIgnored(appid: number): UserPrefs {
 export function unmark(appid: number): UserPrefs {
   const p = load();
   p.completed = p.completed.filter((id) => id !== appid);
+  p.shelved = p.shelved.filter((id) => id !== appid);
   p.ignored = p.ignored.filter((id) => id !== appid);
   save(p);
   return p;
