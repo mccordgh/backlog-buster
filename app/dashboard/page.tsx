@@ -51,19 +51,14 @@ function GameRow({
   game?: EnrichedGame;
   onRestore: () => void;
 }) {
-  const imgUrl =
-    game?.img_icon_url
-      ? `https://media.steampowered.com/steamcommunity/public/images/apps/${appid}/${game.img_icon_url}.jpg`
-      : null;
-
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-800 rounded-xl border border-gray-700">
-      {imgUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imgUrl} alt={game?.name ?? ""} className="w-8 h-8 rounded object-cover flex-shrink-0" />
-      ) : (
-        <div className="w-8 h-8 rounded bg-gray-700 flex-shrink-0 flex items-center justify-center text-sm">🎮</div>
-      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`}
+        alt={game?.name ?? ""}
+        className="w-16 h-9 rounded object-cover flex-shrink-0"
+      />
       <span className="flex-1 text-sm text-gray-300 truncate">
         {game?.name ?? `App #${appid}`}
       </span>
@@ -91,10 +86,6 @@ function GameCard({
   onMarkShelved: () => void;
   onMarkIgnored: () => void;
 }) {
-  const imgUrl = game.img_icon_url
-    ? `https://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_icon_url}.jpg`
-    : null;
-
   const hoursLeft =
     game.remainingHours !== null
       ? game.remainingHours < 1
@@ -111,12 +102,12 @@ function GameCard({
         <span className={rankColors[rank] ?? "text-gray-400"}>{rankLabel}</span>
       </div>
 
-      {imgUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imgUrl} alt={game.name} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
-      ) : (
-        <div className="w-16 h-16 rounded-lg bg-gray-700 flex-shrink-0 flex items-center justify-center text-2xl">🎮</div>
-      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${game.appid}/header.jpg`}
+        alt={game.name}
+        className="w-28 h-[52px] rounded-lg object-cover flex-shrink-0"
+      />
 
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-white truncate">{game.name}</h3>
