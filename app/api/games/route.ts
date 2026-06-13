@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { getOwnedGames } from "@/lib/steam";
+import { checkLikelyBeaten, getOwnedGames } from "@/lib/steam";
 import { enrichGames, rankByRemainingTime } from "@/lib/igdb";
 
 export async function GET(request: NextRequest) {
@@ -24,13 +24,31 @@ export async function GET(request: NextRequest) {
 
     const enriched = await enrichGames(candidates);
     const ranked = rankByRemainingTime(enriched);
-    const top = ranked.slice(0, topN);
+
+    // Check achievements for a pool 3× topN (capped at 30) so we have
+    // enough backfills after filtering out likely-beaten games.
+    const poolSize = Math.min(topN * 3, 30, ranked.length);
+    const pool = ranked.slice(0, poolSize);
+
+    const checkedPool = await Promise.all(
+      pool.map(async (game) => {
+        // Skip achievement check for games never launched
+        if (game.playtimeHours === 0) return { ...game, likelyBeaten: false };
+        const likelyBeaten = await checkLikelyBeaten(session.steamId!, game.appid);
+        return { ...game, likelyBeaten };
+      })
+    );
+
+    const notBeaten = checkedPool.filter((g) => !g.likelyBeaten);
+    const recommendations = notBeaten.slice(0, topN);
+    const beatenHidden = checkedPool.length - notBeaten.length;
 
     return NextResponse.json({
       total: allGames.length,
       processed: candidates.length,
-      recommendations: top,
+      recommendations,
       allEnriched: enriched,
+      beatenHidden,
     });
   } catch (err) {
     console.error("Games fetch error:", err);

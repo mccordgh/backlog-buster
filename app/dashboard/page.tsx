@@ -8,6 +8,7 @@ interface GamesResponse {
   processed: number;
   recommendations: EnrichedGame[];
   allEnriched: EnrichedGame[];
+  beatenHidden: number;
 }
 
 function GameCard({
@@ -24,8 +25,8 @@ function GameCard({
   const hoursLeft =
     game.remainingHours !== null
       ? game.remainingHours < 1
-        ? `${Math.round(game.remainingHours * 60)}m left`
-        : `${game.remainingHours.toFixed(1)}h left`
+        ? `~${Math.round(game.remainingHours * 60)}m left (est.)`
+        : `~${game.remainingHours.toFixed(1)}h left (est.)`
       : null;
 
   const rankColors = ["text-yellow-400", "text-gray-300", "text-amber-600"];
@@ -55,7 +56,7 @@ function GameCard({
 
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-400">
           {game.hltbMainHours !== null && (
-            <span>⏱ {game.hltbMainHours}h to beat</span>
+            <span>⏱ ~{Math.round(game.hltbMainHours)}h avg to beat</span>
           )}
           {game.playtimeHours > 0 && (
             <span>🕹 {game.playtimeHours.toFixed(1)}h played</span>
@@ -68,7 +69,7 @@ function GameCard({
         {game.percentComplete !== null && (
           <div className="mt-2">
             <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span>{game.percentComplete}% complete</span>
+              <span>~{game.percentComplete}% of avg</span>
             </div>
             <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
               <div
@@ -150,7 +151,20 @@ export default function DashboardPage() {
               <h2 className="text-2xl font-bold">Your Shelf of Shame</h2>
               <p className="text-gray-400 text-sm">
                 From {data.total} games in your library, here are the ones
-                you&apos;re closest to finishing:
+                you&apos;re closest to finishing — ranked by estimated hours
+                remaining.
+              </p>
+              <p className="text-xs text-gray-600">
+                Times are averages from IGDB and will vary based on your pace
+                and playstyle.
+                {data.beatenHidden > 0 && (
+                  <span className="text-amber-600/80">
+                    {" "}
+                    {data.beatenHidden} game
+                    {data.beatenHidden > 1 ? "s" : ""} with story-completion
+                    achievements were hidden.
+                  </span>
+                )}
               </p>
             </div>
 
@@ -177,8 +191,9 @@ export default function DashboardPage() {
                 <p className="text-4xl mb-3">🎉</p>
                 <p className="font-semibold">No shelf of shame found!</p>
                 <p className="text-sm mt-1">
-                  Either your library is spotless or IGDB didn&apos;t
-                  have data for your games.
+                  Either your backlog is clear, you&apos;ve already beaten
+                  everything, or IGDB didn&apos;t have completion data for
+                  your games.
                 </p>
               </div>
             ) : (
@@ -190,7 +205,7 @@ export default function DashboardPage() {
             )}
 
             <p className="text-xs text-gray-600 text-center">
-              Completion times from IGDB · Main story only ·{" "}
+              Avg completion times from IGDB · Main story · estimates only ·{" "}
               {data.processed} games checked
             </p>
           </>

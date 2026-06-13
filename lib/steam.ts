@@ -51,6 +51,46 @@ export async function getSteamProfile(steamId: string): Promise<{
   return { name: player.personaname, avatar: player.avatarmedium };
 }
 
+// Phrases commonly found in story-completion achievement names / descriptions.
+// Checked case-insensitively against both the display name and description fields.
+const STORY_KEYWORDS = [
+  "finish the story", "complete the story",
+  "finish the main", "complete the main",
+  "finish the campaign", "complete the campaign",
+  "finish the game", "complete the game",
+  "beat the game", "beaten the game",
+  "watch the credits", "see the credits", "roll credits", "ending credits",
+  "reach the ending", "see the ending", "true ending",
+  "the final chapter", "final mission",
+];
+
+export async function checkLikelyBeaten(
+  steamId: string,
+  appid: number
+): Promise<boolean> {
+  try {
+    const url =
+      `https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/` +
+      `?key=${STEAM_API_KEY}&steamid=${steamId}&appid=${appid}&l=english`;
+    const res = await fetch(url, { next: { revalidate: 3600 } });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const achievements: Array<{
+      achieved: number;
+      name?: string;
+      description?: string;
+    }> = data.playerstats?.achievements ?? [];
+
+    return achievements.some((a) => {
+      if (!a.achieved) return false;
+      const text = `${a.name ?? ""} ${a.description ?? ""}`.toLowerCase();
+      return STORY_KEYWORDS.some((kw) => text.includes(kw));
+    });
+  } catch {
+    return false;
+  }
+}
+
 export async function getOwnedGames(steamId: string): Promise<SteamGame[]> {
   const url =
     `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/` +

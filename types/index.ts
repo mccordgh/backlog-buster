@@ -11,6 +11,7 @@ export interface EnrichedGame extends SteamGame {
   remainingHours: number | null;
   isCompleted: boolean;
   percentComplete: number | null;
+  likelyBeaten?: boolean;
 }
 
 export interface SessionData {
