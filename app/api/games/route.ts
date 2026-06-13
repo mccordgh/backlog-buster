@@ -9,10 +9,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const url = new URL(request.url);
-  const limitParam = url.searchParams.get("limit");
-  const topN = limitParam ? parseInt(limitParam, 10) : 5;
-
   try {
     const allGames = await getOwnedGames(session.steamId);
 
@@ -25,9 +21,9 @@ export async function GET(request: NextRequest) {
     const enriched = await enrichGames(candidates);
     const ranked = rankByRemainingTime(enriched);
 
-    // Check achievements for a pool 3× topN (capped at 30) so we have
-    // enough backfills after filtering out likely-beaten games.
-    const poolSize = Math.min(topN * 3, 30, ranked.length);
+    // Return a pool of 30 so the client can filter user-dismissed games and
+    // still have backfill candidates without another API round-trip.
+    const poolSize = Math.min(30, ranked.length);
     const pool = ranked.slice(0, poolSize);
 
     const checkedPool = await Promise.all(
@@ -39,9 +35,8 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    const notBeaten = checkedPool.filter((g) => !g.likelyBeaten);
-    const recommendations = notBeaten.slice(0, topN);
-    const beatenHidden = checkedPool.length - notBeaten.length;
+    const recommendations = checkedPool.filter((g) => !g.likelyBeaten);
+    const beatenHidden = checkedPool.length - recommendations.length;
 
     return NextResponse.json({
       total: allGames.length,

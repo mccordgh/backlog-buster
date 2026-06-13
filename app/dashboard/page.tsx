@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EnrichedGame } from "@/types";
+import { loadPrefs, markCompleted, markIgnored, unmark, UserPrefs } from "@/lib/userPrefs";
 
 interface GamesResponse {
   total: number;
@@ -11,12 +12,22 @@ interface GamesResponse {
   beatenHidden: number;
 }
 
+interface UndoState {
+  appid: number;
+  name: string;
+  type: "completed" | "ignored";
+}
+
 function GameCard({
   game,
   rank,
+  onMarkCompleted,
+  onMarkIgnored,
 }: {
   game: EnrichedGame;
   rank: number;
+  onMarkCompleted: () => void;
+  onMarkIgnored: () => void;
 }) {
   const imgUrl = game.img_icon_url
     ? `https://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_icon_url}.jpg`
@@ -33,7 +44,7 @@ function GameCard({
   const rankLabel = ["🥇", "🥈", "🥉"][rank] ?? `#${rank + 1}`;
 
   return (
-    <div className="bg-gray-800 rounded-2xl p-5 flex gap-4 items-start hover:bg-gray-750 transition-colors border border-gray-700">
+    <div className="bg-gray-800 rounded-2xl p-5 flex gap-4 items-start border border-gray-700 transition-all">
       <div className="text-2xl w-8 text-center flex-shrink-0 mt-1">
         <span className={rankColors[rank] ?? "text-gray-400"}>{rankLabel}</span>
       </div>
@@ -85,6 +96,29 @@ function GameCard({
             Not started
           </span>
         )}
+
+        <div className="flex gap-4 mt-3 pt-3 border-t border-gray-700/50">
+          <button
+            onClick={onMarkCompleted}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-green-400 transition-colors"
+            title="I've beaten the main story"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Beaten it
+          </button>
+          <button
+            onClick={onMarkIgnored}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-200 transition-colors"
+            title="No clear ending — roguelike, sandbox, etc."
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            No ending / Skip
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -95,11 +129,19 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [topN, setTopN] = useState(5);
+  const [prefs, setPrefs] = useState<UserPrefs>({ completed: [], ignored: [] });
+  const [undo, setUndo] = useState<UndoState | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load prefs from localStorage once on mount
+  useEffect(() => {
+    setPrefs(loadPrefs());
+  }, []);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/games?limit=${topN}`)
+    fetch("/api/games")
       .then((r) => {
         if (r.status === 401) {
           window.location.href = "/";
@@ -108,12 +150,45 @@ export default function DashboardPage() {
         if (!r.ok) throw new Error("Failed to load games");
         return r.json();
       })
-      .then((d) => {
-        if (d) setData(d);
-      })
+      .then((d) => { if (d) setData(d); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [topN]);
+  }, []); // fetch once; client-side topN / pref filtering does the rest
+
+  function showUndo(appid: number, name: string, type: UndoState["type"]) {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndo({ appid, name, type });
+    undoTimer.current = setTimeout(() => setUndo(null), 5000);
+  }
+
+  function handleMarkCompleted(game: EnrichedGame) {
+    const updated = markCompleted(game.appid);
+    setPrefs(updated);
+    showUndo(game.appid, game.name, "completed");
+  }
+
+  function handleMarkIgnored(game: EnrichedGame) {
+    const updated = markIgnored(game.appid);
+    setPrefs(updated);
+    showUndo(game.appid, game.name, "ignored");
+  }
+
+  function handleUndo() {
+    if (!undo) return;
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    const updated = unmark(undo.appid);
+    setPrefs(updated);
+    setUndo(null);
+  }
+
+  const dismissedSet = new Set([...prefs.completed, ...prefs.ignored]);
+  const visible = (data?.recommendations ?? [])
+    .filter((g) => !dismissedSet.has(g.appid))
+    .slice(0, topN);
+
+  const userHiddenCount = (data?.recommendations ?? []).filter((g) =>
+    dismissedSet.has(g.appid)
+  ).length;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -132,7 +207,7 @@ export default function DashboardPage() {
           <div className="text-center space-y-4 py-20">
             <div className="text-4xl animate-spin inline-block">⚙️</div>
             <p className="text-gray-400">
-              Fetching your library and looking up completion times…
+              Fetching your library and looking up completion times via IGDB…
               <br />
               <span className="text-sm">This can take a minute for large libraries.</span>
             </p>
@@ -159,10 +234,13 @@ export default function DashboardPage() {
                 and playstyle.
                 {data.beatenHidden > 0 && (
                   <span className="text-amber-600/80">
-                    {" "}
-                    {data.beatenHidden} game
-                    {data.beatenHidden > 1 ? "s" : ""} with story-completion
-                    achievements were hidden.
+                    {" "}{data.beatenHidden} game{data.beatenHidden > 1 ? "s" : ""} with
+                    story-completion achievements were hidden.
+                  </span>
+                )}
+                {userHiddenCount > 0 && (
+                  <span className="text-gray-500">
+                    {" "}{userHiddenCount} hidden by you.
                   </span>
                 )}
               </p>
@@ -186,7 +264,7 @@ export default function DashboardPage() {
               <span className="text-gray-400">games</span>
             </div>
 
-            {data.recommendations.length === 0 ? (
+            {visible.length === 0 ? (
               <div className="bg-gray-800 rounded-2xl p-8 text-center text-gray-400">
                 <p className="text-4xl mb-3">🎉</p>
                 <p className="font-semibold">No shelf of shame found!</p>
@@ -198,8 +276,14 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {data.recommendations.map((game, i) => (
-                  <GameCard key={game.appid} game={game} rank={i} />
+                {visible.map((game, i) => (
+                  <GameCard
+                    key={game.appid}
+                    game={game}
+                    rank={i}
+                    onMarkCompleted={() => handleMarkCompleted(game)}
+                    onMarkIgnored={() => handleMarkIgnored(game)}
+                  />
                 ))}
               </div>
             )}
@@ -211,6 +295,22 @@ export default function DashboardPage() {
           </>
         )}
       </main>
+
+      {/* Undo toast */}
+      {undo && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-gray-700 text-sm text-white px-4 py-2.5 rounded-full shadow-xl border border-gray-600 z-50">
+          <span className="text-gray-300">
+            {undo.type === "completed" ? "Marked as beaten:" : "Skipped:"}{" "}
+            <span className="text-white font-medium">{undo.name}</span>
+          </span>
+          <button
+            onClick={handleUndo}
+            className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+          >
+            Undo
+          </button>
+        </div>
+      )}
     </div>
   );
 }
