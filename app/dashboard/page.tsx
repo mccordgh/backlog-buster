@@ -177,7 +177,7 @@ export default function DashboardPage() {
                 <p className="text-4xl mb-3">🎉</p>
                 <p className="font-semibold">No shelf of shame found!</p>
                 <p className="text-sm mt-1">
-                  Either your library is spotless or HowLongToBeat didn&apos;t
+                  Either your library is spotless or IGDB didn&apos;t
                   have data for your games.
                 </p>
               </div>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
             )}
 
             <p className="text-xs text-gray-600 text-center">
-              Completion times from HowLongToBeat · Main story only ·{" "}
+              Completion times from IGDB · Main story only ·{" "}
               {data.processed} games checked
             </p>
           </>

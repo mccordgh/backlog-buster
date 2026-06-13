@@ -27,7 +27,7 @@ export default async function HomePage({
 
         <div className="bg-gray-800 rounded-2xl p-6 space-y-4 text-left text-sm text-gray-300">
           <p>✅ Connects to your Steam library</p>
-          <p>⏱️ Pulls completion times from HowLongToBeat</p>
+          <p>⏱️ Pulls completion times from IGDB</p>
           <p>📊 Ranks games by how close you are to finishing</p>
           <p>🏆 Shows your top picks to clear the backlog</p>
         </div>

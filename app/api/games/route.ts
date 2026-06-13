@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { getOwnedGames } from "@/lib/steam";
-import { enrichGames, rankByRemainingTime } from "@/lib/hltb";
+import { enrichGames, rankByRemainingTime } from "@/lib/igdb";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     const allGames = await getOwnedGames(session.steamId);
 
-    // Limit to 100 games for HLTB lookup performance; prioritise played games
+    // Limit to 100 games for IGDB lookup performance; prioritise played games
     const sorted = [...allGames].sort(
       (a, b) => b.playtime_forever - a.playtime_forever
     );
