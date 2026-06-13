@@ -337,7 +337,6 @@ export default function DashboardPage() {
 
   const dismissedSet = new Set([...prefs.completed, ...prefs.shelved, ...prefs.ignored]);
   const visible = (data?.recommendations ?? []).filter((g) => !dismissedSet.has(g.appid)).slice(0, topN);
-  const userHiddenCount = (data?.recommendations ?? []).filter((g) => dismissedSet.has(g.appid)).length;
 
   const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: "main",      label: "Shelf of Shame" },
@@ -392,29 +391,42 @@ export default function DashboardPage() {
                     <p className="text-gray-400 text-sm">
                       From {data.total} games, ranked by estimated hours remaining.
                     </p>
-                    <p className="text-xs text-gray-600">
-                      Avg completion times from IGDB · main story · estimates only.
-                      {data.beatenHidden > 0 && (
-                        <span className="text-amber-600/80">
-                          {" "}{data.beatenHidden} game{data.beatenHidden > 1 ? "s" : ""} with story-completion achievements hidden.
-                        </span>
-                      )}
-                      {userHiddenCount > 0 && (
-                        <span className="text-gray-500">
-                          {" "}{userHiddenCount} hidden by you.{" "}
-                          <button onClick={() => setTab("dismissed")} className="underline hover:text-gray-300 cursor-pointer">Manage</button>
-                        </span>
-                      )}
+                    <p className="text-xs text-gray-600 flex items-center gap-1">
+                      Avg completion times from{" "}
+                      <a href="https://www.igdb.com" target="_blank" rel="noopener noreferrer"
+                        className="text-gray-500 hover:text-gray-300 transition-colors underline underline-offset-2">
+                        IGDB
+                      </a>
+                      <a href="https://www.igdb.com/about" target="_blank" rel="noopener noreferrer"
+                        className="text-gray-600 hover:text-blue-400 transition-colors" title="What is IGDB?">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </a>
                     </p>
+                  </div>
 
-                    {/* Last updated / refresh row */}
-                    <div className="flex items-center gap-3 pt-0.5">
+                  <div className="flex flex-col items-end gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-2 text-sm">
+                      <label htmlFor="topN" className="text-gray-400 whitespace-nowrap">Show top</label>
+                      <select id="topN" value={topN} onChange={(e) => setTopN(Number(e.target.value))}
+                        className="bg-gray-800 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-1.5 cursor-pointer focus:outline-none focus:border-green-500">
+                        <option value={5}>5 games</option>
+                        <option value={10}>10 games</option>
+                        <option value={25}>25 games</option>
+                      </select>
+                    </div>
+
+                    {/* Last updated / refresh — right-aligned, visually distinct */}
+                    <div className="flex items-center gap-2">
                       {cachedAt && !loading && (
-                        <span className="text-xs text-gray-600">Last updated {timeAgo(cachedAt)}</span>
+                        <span className="text-xs text-gray-500">
+                          Last updated <span className="text-gray-300 font-medium">{timeAgo(cachedAt)}</span>
+                        </span>
                       )}
                       {loading ? (
-                        <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <span className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-600">
+                          <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
                           </svg>
@@ -422,8 +434,8 @@ export default function DashboardPage() {
                         </span>
                       ) : (
                         <button onClick={fetchGames}
-                          className="text-xs text-gray-600 hover:text-gray-300 transition-colors cursor-pointer flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          className="flex items-center gap-1.5 text-xs text-gray-300 bg-gray-700 hover:bg-gray-600 border border-gray-600 hover:border-gray-500 px-3 py-1.5 rounded-lg transition-colors cursor-pointer font-medium">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
                           Refresh
@@ -433,16 +445,6 @@ export default function DashboardPage() {
                         <span className="text-xs text-red-400">{refreshError}</span>
                       )}
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm flex-shrink-0">
-                    <label htmlFor="topN" className="text-gray-400 whitespace-nowrap">Show top</label>
-                    <select id="topN" value={topN} onChange={(e) => setTopN(Number(e.target.value))}
-                      className="bg-gray-800 border border-gray-600 text-gray-300 text-sm rounded-lg px-3 py-1.5 cursor-pointer focus:outline-none focus:border-green-500">
-                      <option value={5}>5 games</option>
-                      <option value={10}>10 games</option>
-                      <option value={25}>25 games</option>
-                    </select>
                   </div>
                 </div>
 
