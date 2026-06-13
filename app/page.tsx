@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { CachedSessionLink } from "@/app/components/CachedSessionLink";
 
 export default async function HomePage({
   searchParams,
@@ -53,6 +54,8 @@ export default async function HomePage({
         <p className="text-xs text-gray-600">
           We only read your public game library. No passwords are stored.
         </p>
+
+        <CachedSessionLink />
       </div>
     </main>
   );

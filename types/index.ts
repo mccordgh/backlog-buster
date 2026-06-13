@@ -14,6 +14,14 @@ export interface EnrichedGame extends SteamGame {
   likelyBeaten?: boolean;
 }
 
+export interface GamesResponse {
+  total: number;
+  processed: number;
+  recommendations: EnrichedGame[];
+  allEnriched: EnrichedGame[];
+  beatenHidden: number;
+}
+
 export interface SessionData {
   steamId?: string;
   steamName?: string;
